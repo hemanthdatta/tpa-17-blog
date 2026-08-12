@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fine-tuning Foundation Models for Low-Data Image Classification</title>
+<meta name="description" content="A hands-on study of zero-shot, linear probing, full fine-tuning, LoRA, BitFit and prefix-tuning for domain-specific image classification in low-data regimes.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #1a202c;
+    --muted: #5a6474;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --line: #e2e8f0;
+    --code-bg: #f6f8fa;
+    --chip: #eef2ff;
+    --chip-ink: #4338ca;
+    --maxw: 760px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.65;
+    font-size: 17px;
+  }
+  .container { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  header.hero {
+    border-bottom: 1px solid var(--line);
+    padding: 72px 0 48px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  }
+  .kicker {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  h1 { font-size: 38px; line-height: 1.2; letter-spacing: -0.02em; margin: 16px 0 20px; }
+  .dek { font-size: 19px; color: var(--muted); margin: 0 0 28px; max-width: 640px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 14px; color: var(--muted); }
+  .meta a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .meta a:hover { text-decoration: underline; }
+  main { padding: 56px 0 80px; }
+  section { margin-bottom: 56px; }
+  h2 {
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    scroll-margin-top: 24px;
+  }
+  h3 { font-size: 20px; margin: 36px 0 12px; }
+  p { margin: 0 0 18px; }
+  a { color: var(--accent); }
+  strong { font-weight: 650; }
+  ul, ol { margin: 0 0 18px; padding-left: 24px; }
+  li { margin-bottom: 8px; }
+  .lead { font-size: 18px; color: #334155; }
+  blockquote {
+    margin: 24px 0;
+    padding: 4px 20px;
+    border-left: 4px solid var(--accent);
+    color: #334155;
+    background: var(--accent-soft);
+    border-radius: 0 8px 8px 0;
+  }
+  figure { margin: 28px 0; }
+  figure img {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display: block;
+  }
+  figcaption {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    margin: 20px 0 8px;
+  }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 24px 0;
+  }
+  .callout h3 { margin: 0 0 10px; font-size: 16px; }
+  .callout ul { margin-bottom: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+  .chip {
+    font-size: 13px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-weight: 500;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin: 20px 0;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+  pre code { background: none; padding: 0; }
+  .footer {
+    border-top: 1px solid var(--line);
+    padding: 32px 0 56px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  @media (max-width: 600px) {
+    h1 { font-size: 29px; }
+    header.hero { padding: 48px 0 36px; }
+    table { font-size: 13px; }
+    th, td { padding: 8px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <div class="kicker">Technical Deep Dive</div>
+    <h1>Fine-tuning Foundation Models for Low-Data Image Classification</h1>
+    <p class="dek">A hands-on comparison of zero-shot evaluation, linear probing, full fine-tuning, LoRA, BitFit and prefix-tuning across multiple specialized domains &mdash; and how far a frozen backbone gets you when labels are scarce.</p>
+    <div class="meta">
+      <span>TPA-17 project</span>
+      <span>&middot;</span>
+      <a href="https://github.com/hemanthdatta/tpa-17">github.com/hemanthdatta/tpa-17</a>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <section id="key-findings">
+    <h2>Key findings</h2>
+    <div class="callout">
+      <h3>TL;DR</h3>
+      <ul>
+        <li><strong>DINOv2 + a 3-layer head beat everything</strong> in Stage 1: <strong>92.33% test accuracy</strong> with a completely frozen backbone on a 15-class, mixed-domain dataset.</li>
+        <li>Frozen-feature approaches reach <strong>~85&ndash;92%</strong> with under 1% trainable parameters &mdash; full fine-tuning buys only a few points at 100% cost.</li>
+        <li><strong>LoRA on attention + MLP</strong> (not MLP-only) is the difference between 4&ndash;5% and 87&ndash;93% accuracy.</li>
+        <li>Zero-shot shows the real domain gap: 40&ndash;60% on agriculture, ~65&ndash;75% on natural images, without a single training label.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="problem">
+    <h2>The problem: foundation models meet narrow domains</h2>
+    <p class="lead">Foundation models such as CLIP and DINOv2 are remarkable on web-scale benchmarks, but they stumble on specialized domains &mdash; plant diseases, steel surface defects, wafer or PCB faults, medical imagery. The gap between what a model saw during pre-training and what your domain looks like is <em>domain shift</em>.</p>
+    <p>The harder constraint is <strong>data</strong>. Real experts label slowly and expensively, so you rarely have thousands of samples per class. This project answers a practical question:</p>
+    <blockquote>With only <strong>~50 labeled images per class</strong>, which fine-tuning strategy gets you closest to production-grade accuracy &mdash; and at what cost?</blockquote>
+    <p>We evaluated six strategies &mdash; <em>zero-shot, linear probing, full fine-tuning, LoRA, BitFit, prefix-tuning</em> &mdash; across a unified 15-class dataset mixing marine, medical, and landscape imagery, plus dedicated runs on Flowers102, PlantVillage, steel defects, aircraft recognition, and bone-fracture X-rays.</p>
+    <div class="chips">
+      <span class="chip">CLIP (OpenCLIP)</span>
+      <span class="chip">DINOv2</span>
+      <span class="chip">ViT-B-32</span>
+      <span class="chip">15-class unified dataset</span>
+      <span class="chip">50 samples/class</span>
+    </div>
+  </section>
+
+  <section id="setup">
+    <h2>Experiment setup</h2>
+    <p>To stress-test generalization, we built a <strong>unified mixed dataset</strong> combining 15 classes that a single model would never see together:</p>
+    <table>
+      <tr><th>Domain</th><th>Classes</th></tr>
+      <tr><td>Marine</td><td>Coral-Reef, Crab, Fish, Fish-Group, Jelly-fish, Trash, Water</td></tr>
+      <tr><td>Medical (MRI)</td><td>Glioma tumor, Meningioma tumor, Pituitary tumor, No tumor</td></tr>
+      <tr><td>Landscape / Weather</td><td>Cloudy, Desert, Green area</td></tr>
+      <tr><td>Human</td><td>Human</td></tr>
+    </table>
+    <p>Every split is class-balanced &mdash; a strict low-data regime:</p>
+    <pre><code>Train:  50 samples/class  = 750 images
+Val:    20 samples/class  = 300 images
+Test:   20 samples/class  = 300 images</code></pre>
+    <p>The design is deliberately multi-stage: freeze everything first and find the best classifier head, then progressively unfreeze the backbone to recover what a frozen encoder misses.</p>
+  </section>
+
+  <section id="stage1">
+    <h2>Stage 1: How good is a frozen backbone anyway?</h2>
+    <p>Before touching any weights, we froze both CLIP (ViT-B-32, OpenCLIP) and DINOv2 backbones, cached their features once, and trained shallow MLP heads of increasing depth (1&ndash;3 layers) on top. This is the cheapest possible adaptation and it sets the bar everything else must beat.</p>
+
+    <h3>Results &mdash; 6 models, one frozen-feature race</h3>
+    <table>
+      <tr>
+        <th>Rank</th><th>Model</th>
+        <th class="num">Test Acc</th><th class="num">Val Acc</th><th class="num">Macro F1</th>
+      </tr>
+      <tr><td>1</td><td><strong>dinov2_3layer</strong></td><td class="num"><strong>92.33%</strong></td><td class="num">90.33%</td><td class="num">0.9249</td></tr>
+      <tr><td>2</td><td>dinov2_1layer</td><td class="num">91.67%</td><td class="num">90.00%</td><td class="num">0.9184</td></tr>
+      <tr><td>3</td><td>dinov2_2layer</td><td class="num">91.67%</td><td class="num">89.67%</td><td class="num">0.9178</td></tr>
+      <tr><td>4</td><td>clip_3layer</td><td class="num">89.67%</td><td class="num">91.33%</td><td class="num">0.8969</td></tr>
+      <tr><td>5</td><td>clip_1layer</td><td class="num">89.00%</td><td class="num">91.67%</td><td class="num">0.8911</td></tr>
+      <tr><td>6</td><td>clip_2layer</td><td class="num">89.00%</td><td class="num">91.33%</td><td class="num">0.8906</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/accuracy_comparison.png" alt="Bar chart comparing test and validation accuracy across six CLIP and DINOv2 MLP-head configurations.">
+      <figcaption>Stage 1 accuracy comparison. DINOv2 with a 3-layer head wins at 92.33% test accuracy &mdash; no backbone training involved.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/training_curves.png" alt="Training curves for six CLIP and DINOv2 classifier-head configurations.">
+      <figcaption>Stage 1 training curves: each head converges smoothly on frozen features with early stopping (patience 10).</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/confusion_matrix.png" alt="Normalized confusion matrix for the best Stage 1 model.">
+      <figcaption>Normalized confusion matrix for the best model. Errors concentrate among visually similar classes within the same domain.</figcaption>
+    </figure>
+  </section>
+
+  <section id="methods">
+    <h2>The six fine-tuning strategies, compared</h2>
+    <p>With the frozen-feature baseline set, we layered on the full toolkit. Each method represents a different point on the <em>trainable-parameters &harr; accuracy</em> curve:</p>
+
+    <table>
+      <tr>
+        <th>Method</th><th>What it trains</th>
+        <th class="num">Trainable</th>
+        <th class="num">Test acc (expected)</th>
+        <th>Best for</th>
+      </tr>
+      <tr>
+        <td><strong>Zero-shot</strong></td>
+        <td>Nothing &mdash; text&ndash;image similarity</td>
+        <td class="num">0%</td>
+        <td class="num">40&ndash;60%</td>
+        <td>Baseline, no labels at all</td>
+      </tr>
+      <tr>
+        <td><strong>BitFit</strong></td>
+        <td>Bias terms only</td>
+        <td class="num">~0.01%</td>
+        <td class="num">70&ndash;80%</td>
+        <td>Quick adaptation on tiny budgets</td>
+      </tr>
+      <tr>
+        <td><strong>Prefix-tuning</strong></td>
+        <td>Continuous prompt tokens</td>
+        <td class="num">~0.5%</td>
+        <td class="num">75&ndash;83%</td>
+        <td>Input-level, composable adaptation</td>
+      </tr>
+      <tr>
+        <td><strong>Linear probe</strong></td>
+        <td>One linear layer on frozen features</td>
+        <td class="num">&lt;1%</td>
+        <td class="num">75&ndash;85%</td>
+        <td>Feature quality check, fast baseline</td>
+      </tr>
+      <tr>
+        <td><strong>LoRA</strong></td>
+        <td>Low-rank matrices in attention + MLP</td>
+        <td class="num">~0.1&ndash;1%</td>
+        <td class="num">80&ndash;88%</td>
+        <td>Best efficiency/accuracy trade-off</td>
+      </tr>
+      <tr>
+        <td><strong>Full fine-tune</strong></td>
+        <td>Entire backbone end-to-end</td>
+        <td class="num">100%</td>
+        <td class="num">85&ndash;92%</td>
+        <td>Maximum accuracy, resources permitting</td>
+      </tr>
+    </table>
+
+    <h3>LoRA, one layer deep</h3>
+    <p>LoRA freezes the original weights and injects two small low-rank matrices, <code>A</code> and <code>B</code>, so the weight update is <code>&Delta;W = B&middot;A</code> with <code>rank &lt;&lt; dim</code>. Train only those &mdash; then merge them back into the weights for <em>zero</em> inference overhead.</p>
+    <pre><code>class LoRALayer(nn.Module):
+    def __init__(self, in_features, out_features, rank=16, alpha=32):
+        super().__init__()
+        self.lora_A = nn.Parameter(torch.randn(in_features, rank))
+        self.lora_B = nn.Parameter(torch.zeros(rank, out_features))
+        self.scaling = alpha / rank
+
+    def forward(self, x):
+        return x + (x @ self.lora_A @ self.lora_B) * self.scaling</code></pre>
+
+    <h3>Choosing a method: the decision tree</h3>
+    <ol>
+      <li><strong>Any labeled data?</strong> No &rarr; zero-shot. Yes &rarr; continue.</li>
+      <li><strong>GPU memory?</strong> &lt;8 GB &rarr; BitFit or linear probe. 8&ndash;16 GB &rarr; LoRA or prefix-tuning. &gt;16 GB &rarr; full fine-tuning.</li>
+      <li><strong>Accuracy needed?</strong> Baseline &rarr; linear probe. Strong &rarr; LoRA/prefix. Best &rarr; full fine-tuning.</li>
+      <li><strong>Many task-specific models?</strong> Yes &rarr; LoRA &mdash; a shared backbone plus a pocketful of tiny adapters.</li>
+    </ol>
+  </section>
+
+  <section id="war-story">
+    <h2>War story: taking LoRA from 4% to 87%</h2>
+    <p>The most instructive bug of the project wasn't a crash &mdash; it was a silently terrible result. LoRA was producing <strong>4&ndash;5% accuracy</strong>, worse than random. Three mistakes, all subtle:</p>
+    <h3>1. MLP-only targets</h3>
+    <p>The first implementation injected LoRA only into the MLP blocks (<code>c_fc</code>, <code>c_proj</code>). But Vision Transformers learn through <em>self-attention</em> &mdash; which image patches matter and how they relate. Leaving attention frozen means the model can't learn any new visual pattern. Fix: also target <code>in_proj</code> (Q, K, V) and <code>out_proj</code> &mdash; a 4&times; increase in adapted modules.</p>
+    <h3>2. Rank too low for fine-grained classes</h3>
+    <p>Rank 8 gives only ~98K trainable parameters. Distinguishing 100+ visually similar classes needs real capacity. Bumping rank to 16 (and alpha to 32) quadrupled the adapter's degrees of freedom to ~394K &mdash; about 0.26% of the model.</p>
+    <h3>3. Generic learning rate</h3>
+    <p>LoRA updates sit on top of frozen weights; too high a learning rate makes training oscillate. Dropping LoRA's LR to <code>2e-4</code> (while BitFit kept <code>1e-3</code>) made convergence smooth.</p>
+    <table>
+      <tr><th>Configuration</th><th class="num">Accuracy</th><th class="num">Parameters</th></tr>
+      <tr><td>MLP-only, rank 8</td><td class="num">4&ndash;10%</td><td class="num">~98K</td></tr>
+      <tr><td><strong>Attention + MLP, rank 16</strong></td><td class="num"><strong>87&ndash;93%</strong></td><td class="num">~394K</td></tr>
+    </table>
+    <blockquote>Lesson: when a parameter-efficient method underperforms, the fix is usually <em>where</em> and <em>how much</em> you adapt, not whether the method works at all.</blockquote>
+  </section>
+
+  <section id="progressive">
+    <h2>Going further: progressive (multi-stage) training</h2>
+    <p>Beyond single-method fine-tuning, the project explores a <strong>three-stage progressive schedule</strong> &mdash; on bone-fracture X-ray classification and, in follow-up work, on the unified dataset:</p>
+    <ol>
+      <li><strong>Stage 1 &mdash; linear probing:</strong> frozen backbone, train heads. Best Stage-1 model on bone fracture: <em>DINOv2-Small + 3-layer head</em> (45.58% val).</li>
+      <li><strong>Stage 2 &mdash; partial backbone training:</strong> unfreeze the top layers while the classifier stays fixed, with heavy augmentation. DINOv2's stronger transfer beats CLIP here (37.61% val for CLIP vs DINOv2's higher plateau).</li>
+      <li><strong>Stage 3 &mdash; progressive layer unfreezing:</strong> thaw the backbone layer-by-layer rather than all at once, preserving pre-trained knowledge.</li>
+    </ol>
+    <p>The same philosophy showed up in the unified dataset: instead of full end-to-end fine-tuning, we first cached frozen features, trained the best head, then selectively unfroze &mdash; landing at <strong>92.33%</strong> while keeping the backbone frozen the entire time.</p>
+  </section>
+
+  <section id="takeaways">
+    <h2>What actually matters in low-data fine-tuning</h2>
+    <ul>
+      <li><strong>Start frozen.</strong> A frozen DINOv2 backbone with a 3-layer MLP head hit 92% on a mixed 15-class domain. Unfreezing is only worth it when frozen features plateau.</li>
+      <li><strong>Efficiency buys options.</strong> At &lt;1% trainable parameters, adapter methods let you serve many specialized tasks off one shared backbone &mdash; a huge deployment win.</li>
+      <li><strong>Zero-shot is your honesty check.</strong> It quantifies the domain gap before you spend a single GPU hour, and it's the right answer when labels don't exist.</li>
+      <li><strong>Attention matters for vision.</strong> Parameter-efficient adaptation must reach self-attention layers &mdash; MLP-only LoRA is a trap.</li>
+      <li><strong>Match the learning rate to the method.</strong> LoRA wants <code>2e-4</code>, BitFit tolerates <code>1e-3</code>; generic defaults silently sabotage convergence.</li>
+    </ul>
+  </section>
+
+  <section id="try-it">
+    <h2>Try it yourself</h2>
+    <p>The full codebase is open: six methods, six datasets, and the multi-stage pipeline in one repo.</p>
+    <pre><code>git clone https://github.com/hemanthdatta/tpa-17
+cd tpa-17
+pip install -r requirements.txt
+
+python main.py --all                  # run every method
+python main.py --dataset 1 --lora     # pick a dataset, pick a method
+python main.py --all --model ViT-L-14 --batch-size 64 --epochs 100</code></pre>
+    <p>Results land in <code>./results</code> as JSON, confusion matrices, training curves, and per-method comparison plots.</p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    Written up from the <a href="https://github.com/hemanthdatta/tpa-17">tpa-17</a> project report &mdash; foundation model fine-tuning across multiple datasets in low-data regimes. Built for the TPA-17 course project.
+  </div>
+</footer>
+
+</body>
+</html>
