@@ -157,6 +157,8 @@
     <div class="meta">
       <span>P. Nikhil Swaroop (EE23B055) &middot; N. Hemanth Datta (EP23B028)</span>
       <span>&middot;</span>
+      <span>Course: CS6350 &middot; Prof. Sukhendu Das</span>
+      <span>&middot;</span>
       <a href="https://github.com/hemanthdatta/tpa-17">github.com/hemanthdatta/tpa-17</a>
     </div>
   </div>
@@ -352,6 +354,21 @@ PATIENCE = 5                # Early stopping</code></pre>
     </figure>
   </section>
 
+  <section id="qualitative">
+    <h2>Qualitative results &mdash; TA-provided test samples</h2>
+    <p>Sample predictions on held-out images supplied by the teaching assistants for the TPA-17 evaluation.</p>
+
+    <figure>
+      <img src="img/fig2_ta_samples.png" alt="First set of TA-provided test samples with model predictions.">
+      <figcaption>First set of TA-provided test samples with predictions. The model misclassified the white mountain image as <em>cloudy</em>, while the remaining outputs were correct.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/fig3_ta_samples2.png" alt="Second set of TA-provided test samples with model predictions.">
+      <figcaption>Second set of TA-provided samples. The model confused a <em>fish</em> with a <em>coral reef</em>, but classified the other samples correctly.</figcaption>
+    </figure>
+  </section>
+
   <section id="multistage">
     <h2>Two-stage training results</h2>
     <p>The staged schedule starts cheap and only unfreezes what pays off.</p>
@@ -407,7 +424,7 @@ python main.py --all --model ViT-L-14 --epochs 100</code></pre>
 
 <footer class="footer">
   <div class="container">
-    Summarized from the CS6350 TPA-17 term project report: <em>Fine-tuning the Foundational Model for Image Classification using Few Samples</em> &mdash; P. Nikhil Swaroop (EE23B055) and N. Hemanth Datta (EP23B028). Models: CLIP (Radford et al., 2021) and DINOv2 (Oquab et al., 2023); methods: LoRA (Hu et al., 2021), BitFit (Ben Zaken et al., 2021), Prefix-Tuning (Li &amp; Liang, 2021). Charts generated from the report's result tables.
+    Summarized from the CS6350 TPA-17 term project report: <em>Fine-tuning the Foundational Model for Image Classification using Few Samples</em> &mdash; P. Nikhil Swaroop (EE23B055) and N. Hemanth Datta (EP23B028), under Prof. Sukhendu Das. Models: CLIP (Radford et al., 2021) and DINOv2 (Oquab et al., 2023); methods: LoRA (Hu et al., 2021), BitFit (Ben Zaken et al., 2021), Prefix-Tuning (Li &amp; Liang, 2021). Charts generated from the report's result tables.
   </div>
 </footer>
 
